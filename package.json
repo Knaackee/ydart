@@ -1,0 +1,10 @@
+{
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "yjs:fixture": "node tool/yjs_generate_fixture.mjs"
+  },
+  "devDependencies": {
+    "yjs": "^13.6.27"
+  }
+}

@@ -1,0 +1,18 @@
+include: package:lints/recommended.yaml
+
+analyzer:
+  language:
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true
+  exclude:
+    - lib/src/native/yrs_bindings_generated.dart
+
+linter:
+  rules:
+    camel_case_types: false
+    dangling_library_doc_comments: false
+    prefer_final_locals: true
+    prefer_single_quotes: true
+    unawaited_futures: true
+    cancel_subscriptions: true

@@ -1,0 +1,206 @@
+name: Native mobile release
+
+on:
+  workflow_dispatch:
+    inputs:
+      y_crdt_ref:
+        description: "y-crdt git ref to build. Use main for the current upstream version."
+        required: true
+        default: "main"
+      release_tag:
+        description: "GitHub release tag to create or update."
+        required: true
+        default: "mobile-native"
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+env:
+  Y_CRDT_REPOSITORY: y-crdt/y-crdt
+  CARGO_TERM_COLOR: always
+
+jobs:
+  android:
+    name: Build Android libyrs.so
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout ydart
+        uses: actions/checkout@v4
+        with:
+          path: ydart
+
+      - name: Checkout current y-crdt
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.Y_CRDT_REPOSITORY }}
+          ref: ${{ github.event.inputs.y_crdt_ref || 'main' }}
+          path: y-crdt
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+
+      - name: Enable current y-crdt unstable feature gate when needed
+        shell: bash
+        run: |
+          if grep -R "if let .*=>" "$GITHUB_WORKSPACE/y-crdt/yrs/src" >/dev/null; then
+            if ! grep -q "feature(if_let_guard)" "$GITHUB_WORKSPACE/y-crdt/yrs/src/lib.rs"; then
+              tmp="$(mktemp)"
+              {
+                echo "#![feature(if_let_guard)]"
+                cat "$GITHUB_WORKSPACE/y-crdt/yrs/src/lib.rs"
+              } > "$tmp"
+              mv "$tmp" "$GITHUB_WORKSPACE/y-crdt/yrs/src/lib.rs"
+            fi
+          fi
+
+      - name: Set up Android NDK
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r28c
+          add-to-path: true
+
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk --locked
+
+      - name: Build Android shared libraries
+        run: |
+          cargo ndk \
+            -t arm64-v8a \
+            -t armeabi-v7a \
+            -t x86_64 \
+            -o "$GITHUB_WORKSPACE/ydart/android/src/main/jniLibs" \
+            build --release --manifest-path "$GITHUB_WORKSPACE/y-crdt/yffi/Cargo.toml"
+
+      - name: Package Android libraries
+        working-directory: ydart
+        run: |
+          mkdir -p dist
+          zip -r dist/ydart-android-libyrs.zip android/src/main/jniLibs
+
+      - name: Upload Android artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ydart-android-libyrs
+          path: ydart/dist/ydart-android-libyrs.zip
+
+  ios:
+    name: Build iOS libyrs.xcframework
+    runs-on: macos-latest
+    steps:
+      - name: Checkout ydart
+        uses: actions/checkout@v4
+        with:
+          path: ydart
+
+      - name: Checkout current y-crdt
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.Y_CRDT_REPOSITORY }}
+          ref: ${{ github.event.inputs.y_crdt_ref || 'main' }}
+          path: y-crdt
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          targets: aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios
+
+      - name: Enable current y-crdt unstable feature gate when needed
+        run: |
+          if grep -R "if let .*=>" "$GITHUB_WORKSPACE/y-crdt/yrs/src" >/dev/null; then
+            if ! grep -q "feature(if_let_guard)" "$GITHUB_WORKSPACE/y-crdt/yrs/src/lib.rs"; then
+              tmp="$(mktemp)"
+              {
+                echo "#![feature(if_let_guard)]"
+                cat "$GITHUB_WORKSPACE/y-crdt/yrs/src/lib.rs"
+              } > "$tmp"
+              mv "$tmp" "$GITHUB_WORKSPACE/y-crdt/yrs/src/lib.rs"
+            fi
+          fi
+
+      - name: Install cbindgen
+        run: cargo install cbindgen --locked
+
+      - name: Build iOS static libraries
+        run: |
+          cargo build --release --manifest-path "$GITHUB_WORKSPACE/y-crdt/yffi/Cargo.toml" --target aarch64-apple-ios
+          cargo build --release --manifest-path "$GITHUB_WORKSPACE/y-crdt/yffi/Cargo.toml" --target aarch64-apple-ios-sim
+          cargo build --release --manifest-path "$GITHUB_WORKSPACE/y-crdt/yffi/Cargo.toml" --target x86_64-apple-ios
+
+      - name: Generate C header
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/ydart/build/ios/include"
+          cd "$GITHUB_WORKSPACE/y-crdt"
+          cbindgen --config ./yffi/cbindgen.toml --crate yffi --output "$GITHUB_WORKSPACE/ydart/build/ios/include/libyrs.h" --lang C
+
+      - name: Create iOS simulator fat library
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/ydart/build/ios/simulator"
+          lipo -create \
+            "$GITHUB_WORKSPACE/y-crdt/target/aarch64-apple-ios-sim/release/libyrs.a" \
+            "$GITHUB_WORKSPACE/y-crdt/target/x86_64-apple-ios/release/libyrs.a" \
+            -output "$GITHUB_WORKSPACE/ydart/build/ios/simulator/libyrs.a"
+
+      - name: Create XCFramework
+        run: |
+          rm -rf "$GITHUB_WORKSPACE/ydart/ios/Frameworks/libyrs.xcframework"
+          xcodebuild -create-xcframework \
+            -library "$GITHUB_WORKSPACE/y-crdt/target/aarch64-apple-ios/release/libyrs.a" \
+            -headers "$GITHUB_WORKSPACE/ydart/build/ios/include" \
+            -library "$GITHUB_WORKSPACE/ydart/build/ios/simulator/libyrs.a" \
+            -headers "$GITHUB_WORKSPACE/ydart/build/ios/include" \
+            -output "$GITHUB_WORKSPACE/ydart/ios/Frameworks/libyrs.xcframework"
+
+      - name: Package iOS XCFramework
+        working-directory: ydart
+        run: |
+          mkdir -p dist
+          ditto -c -k --sequesterRsrc --keepParent ios/Frameworks/libyrs.xcframework dist/ydart-ios-libyrs-xcframework.zip
+
+      - name: Upload iOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ydart-ios-libyrs-xcframework
+          path: ydart/dist/ydart-ios-libyrs-xcframework.zip
+
+  release:
+    name: Publish GitHub release
+    runs-on: ubuntu-latest
+    needs:
+      - android
+      - ios
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Resolve release tag
+        id: tag
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            echo "value=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=${{ github.event.inputs.release_tag }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.value }}
+          name: Native mobile artifacts ${{ steps.tag.outputs.value }}
+          body: |
+            Native ydart mobile artifacts built from y-crdt ref `${{ github.event.inputs.y_crdt_ref || 'main' }}`.
+
+            Assets:
+            - `ydart-android-libyrs.zip`
+            - `ydart-ios-libyrs-xcframework.zip`
+          files: |
+            dist/ydart-android-libyrs/ydart-android-libyrs.zip
+            dist/ydart-ios-libyrs-xcframework/ydart-ios-libyrs-xcframework.zip
+          fail_on_unmatched_files: true
