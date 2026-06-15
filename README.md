@@ -190,6 +190,19 @@ dart test
 cd example && flutter pub get && flutter analyze
 ```
 
+Android device/emulator checks:
+
+```bash
+cd example
+flutter test integration_test/native_api_test.dart -d <device-id>
+flutter test integration_test/sync_harness_test.dart -d <device-id>
+```
+
+`native_api_test.dart` covers direct FFI calls for text, map, array, state-sync,
+and a Yjs V1 update fixture. `sync_harness_test.dart` drives the example UI
+through edit and sync flows, including the regression path that previously
+crashed in `ytext_insert`.
+
 Generate a Yjs update fixture:
 
 ```bash

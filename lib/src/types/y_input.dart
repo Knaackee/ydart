@@ -1,4 +1,5 @@
 import 'dart:ffi';
+import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
 
@@ -22,11 +23,23 @@ class YInput {
 
   /// Allocates a YInput for a supported Dart value.
   static Pointer<YInputNative> fromValue(Object? value) {
-    if (value == null) return nullValue();
-    if (value is bool) return boolean(value);
-    if (value is int) return integer(value);
-    if (value is double) return number(value);
-    if (value is String) return string(value);
+    final ptr = calloc<YInputNative>();
+    try {
+      writeValue(ptr, value);
+      return ptr;
+    } catch (_) {
+      calloc.free(ptr);
+      rethrow;
+    }
+  }
+
+  /// Writes a supported Dart [value] into an existing YInput cell.
+  static void writeValue(Pointer<YInputNative> ptr, Object? value) {
+    if (value == null) return writeNull(ptr);
+    if (value is bool) return writeBoolean(ptr, value);
+    if (value is int) return writeInteger(ptr, value);
+    if (value is double) return writeNumber(ptr, value);
+    if (value is String) return writeString(ptr, value);
     throw ArgumentError.value(
       value,
       'value',
@@ -37,72 +50,105 @@ class YInput {
   /// Allocates a YInput for a boolean value.
   static Pointer<YInputNative> boolean(bool value) {
     final ptr = calloc<YInputNative>();
+    writeBoolean(ptr, value);
+    return ptr;
+  }
+
+  /// Writes a boolean value into [ptr].
+  static void writeBoolean(Pointer<YInputNative> ptr, bool value) {
     ptr.ref.tag = YVal.jsonBool;
     ptr.ref.len = 1;
     ptr.ref.value = Pointer.fromAddress(value ? 1 : 0);
-    return ptr;
   }
 
   /// Allocates a YInput for a double value.
   static Pointer<YInputNative> number(double value) {
-    final doublePtr = calloc<Double>();
-    doublePtr.value = value;
     final ptr = calloc<YInputNative>();
+    writeNumber(ptr, value);
+    return ptr;
+  }
+
+  /// Writes a double value into [ptr].
+  static void writeNumber(Pointer<YInputNative> ptr, double value) {
     ptr.ref.tag = YVal.jsonNum;
     ptr.ref.len = 1;
-    ptr.ref.value = doublePtr.cast();
-    return ptr;
+    _valueBytes(ptr).setFloat64(0, value, Endian.host);
   }
 
   /// Allocates a YInput for an integer value.
   static Pointer<YInputNative> integer(int value) {
-    final intPtr = calloc<Int64>();
-    intPtr.value = value;
     final ptr = calloc<YInputNative>();
+    writeInteger(ptr, value);
+    return ptr;
+  }
+
+  /// Writes an integer value into [ptr].
+  static void writeInteger(Pointer<YInputNative> ptr, int value) {
     ptr.ref.tag = YVal.jsonInt;
     ptr.ref.len = 1;
-    ptr.ref.value = intPtr.cast();
-    return ptr;
+    _valueBytes(ptr).setInt64(0, value, Endian.host);
   }
 
   /// Allocates a YInput for a string value.
   static Pointer<YInputNative> string(String value) {
-    final strPtr = value.toNativeUtf8();
     final ptr = calloc<YInputNative>();
+    writeString(ptr, value);
+    return ptr;
+  }
+
+  /// Writes a string value into [ptr].
+  static void writeString(Pointer<YInputNative> ptr, String value) {
+    final strPtr = value.toNativeUtf8();
     ptr.ref.tag = YVal.jsonStr;
     ptr.ref.len = 1;
     ptr.ref.value = strPtr.cast();
-    return ptr;
   }
 
   /// Allocates a YInput for a null value.
   static Pointer<YInputNative> nullValue() {
     final ptr = calloc<YInputNative>();
+    writeNull(ptr);
+    return ptr;
+  }
+
+  /// Writes a null value into [ptr].
+  static void writeNull(Pointer<YInputNative> ptr) {
     ptr.ref.tag = YVal.jsonNull;
     ptr.ref.len = 0;
     ptr.ref.value = nullptr;
-    return ptr;
   }
 
   /// Allocates a YInput for an undefined value.
   static Pointer<YInputNative> undefined() {
     final ptr = calloc<YInputNative>();
+    writeUndefined(ptr);
+    return ptr;
+  }
+
+  /// Writes an undefined value into [ptr].
+  static void writeUndefined(Pointer<YInputNative> ptr) {
     ptr.ref.tag = YVal.jsonUndef;
     ptr.ref.len = 0;
     ptr.ref.value = nullptr;
-    return ptr;
   }
 
   /// Frees a YInput pointer (and nested content based on tag).
   static void destroy(Pointer<YInputNative> ptr) {
     if (ptr == nullptr) return;
+    destroyContent(ptr);
+    calloc.free(ptr);
+  }
+
+  /// Frees nested content for a YInput cell without freeing the cell itself.
+  static void destroyContent(Pointer<YInputNative> ptr) {
     final tag = ptr.ref.tag;
     if (tag == YVal.jsonStr || tag == YVal.jsonBuf) {
       calloc.free(ptr.ref.value);
-    } else if (tag == YVal.jsonNum || tag == YVal.jsonInt) {
-      calloc.free(ptr.ref.value);
     }
-    calloc.free(ptr);
+  }
+
+  static ByteData _valueBytes(Pointer<YInputNative> ptr) {
+    return ByteData.sublistView(ptr.cast<Uint8>().asTypedList(16), 8, 16);
   }
 }
 
@@ -124,9 +170,9 @@ class YOutput {
       case YVal.jsonBool:
         return ptr.ref.value.address != 0;
       case YVal.jsonNum:
-        return ptr.ref.value.cast<Double>().value;
+        return _valueBytes(ptr).getFloat64(0, Endian.host);
       case YVal.jsonInt:
-        return ptr.ref.value.cast<Int64>().value;
+        return _valueBytes(ptr).getInt64(0, Endian.host);
       case YVal.jsonStr:
         return ptr.ref.value.cast<Utf8>().toDartString();
       default:
@@ -144,5 +190,9 @@ class YOutput {
     final value = read(ptr);
     destroy(ptr);
     return value;
+  }
+
+  static ByteData _valueBytes(Pointer<YOutputNative> ptr) {
+    return ByteData.sublistView(ptr.cast<Uint8>().asTypedList(16), 8, 16);
   }
 }

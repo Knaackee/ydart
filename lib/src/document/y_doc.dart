@@ -144,6 +144,9 @@ class YDoc {
   ReadTransaction readTransaction() {
     _checkDisposed();
     final txn = _native.ydocReadTransaction(_handle);
+    if (txn == nullptr) {
+      throw StateError('Could not open read transaction');
+    }
     return ReadTransaction(txn);
   }
 
@@ -154,6 +157,9 @@ class YDoc {
     final originLen = origin?.length ?? 0;
     final txn = _native.ydocWriteTransaction(_handle, originLen, originPtr);
     if (origin != null) calloc.free(originPtr);
+    if (txn == nullptr) {
+      throw StateError('Could not open write transaction');
+    }
     return WriteTransaction(txn);
   }
 

@@ -48,3 +48,41 @@ jobs:
 
       - name: Pub dry run
         run: flutter pub publish --dry-run
+
+  android-integration:
+    name: Android integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout ydart
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Install example dependencies
+        working-directory: example
+        run: flutter pub get
+
+      - name: Run sync harness on Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_6
+          script: |
+            cd example
+            flutter test integration_test/native_api_test.dart -d emulator-5554
+            flutter test integration_test/sync_harness_test.dart -d emulator-5554

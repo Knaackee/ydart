@@ -6,7 +6,7 @@ Future<void> main(List<String> args) async {
   final server = await HttpServer.bind(InternetAddress.loopbackIPv4, port);
   final clients = <WebSocket>{};
 
-  print('ydart relay listening on ws://${server.address.host}:$port');
+  print('ydart relay listening on ws://${server.address.host}:${server.port}');
 
   await for (final request in server) {
     if (!WebSocketTransformer.isUpgradeRequest(request)) {

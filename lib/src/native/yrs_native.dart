@@ -945,7 +945,7 @@ class YrsNative {
   );
   late final ytransactionReadCommit = _lib.lookupFunction<
       _ytransaction_read_commit_c,
-      _ytransaction_read_commit_dart>('ytransaction_read_commit');
+      _ytransaction_read_commit_dart>('ytransaction_commit');
 
   // ---- State sync ----
   late final ytransactionStateVectorV1 = _lib.lookupFunction<

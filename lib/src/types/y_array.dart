@@ -1,7 +1,5 @@
 import 'dart:ffi';
 
-import 'package:ffi/ffi.dart';
-
 import '../document/y_doc.dart';
 import '../document/transaction.dart';
 import '../native/yrs_native.dart';
@@ -27,27 +25,24 @@ class YArray {
     List<Pointer<YInputNative>> values,
   ) {
     if (values.isEmpty) return;
-    final arr = calloc<YInputNative>(values.length);
     for (var i = 0; i < values.length; i++) {
-      arr[i] = values[i].ref;
+      _native.yarrayInsertRange(_handle, txn.handle, index + i, values[i], 1);
     }
-    _native.yarrayInsertRange(_handle, txn.handle, index, arr, values.length);
-    calloc.free(arr);
   }
 
   /// Inserts supported Dart values at [index].
   void insertValues(WriteTransaction txn, int index, List<Object?> values) {
     if (values.isEmpty) return;
-    final inputs = <Pointer<YInputNative>>[];
-    try {
-      for (final value in values) {
-        inputs.add(YInput.fromValue(value));
-      }
-      insertRange(txn, index, inputs);
-    } finally {
-      for (final input in inputs) {
-        YInput.destroy(input);
-      }
+    for (var i = 0; i < values.length; i++) {
+      YInput.withValue(values[i], (input) {
+        _native.yarrayInsertRange(
+          _handle,
+          txn.handle,
+          index + i,
+          input,
+          1,
+        );
+      });
     }
   }
 
