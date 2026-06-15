@@ -89,7 +89,4 @@ jobs:
           api-level: 35
           arch: x86_64
           profile: pixel_6
-          script: |
-            cd example
-            flutter test integration_test/native_api_test.dart -d emulator-5554
-            flutter test integration_test/sync_harness_test.dart -d emulator-5554
+          script: cd example && flutter test integration_test/native_api_test.dart -d emulator-5554 && flutter test integration_test/sync_harness_test.dart -d emulator-5554
