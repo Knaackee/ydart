@@ -11,23 +11,33 @@ apps. It wraps the `yffi` C API from the current upstream `y-crdt` repository.
 
 ## Status
 
-This repository is being hardened for professional mobile use. The upstream
-`yrs` project is solid, but this Dart/Flutter layer must pass native device
-tests and the FFI ownership audit before it should be treated as production
-proven.
+This repository has passed the first mobile hardening smoke gate for Android
+and iOS. The Dart/Flutter FFI layer is tested against the current upstream
+`y-crdt/main`, including Android device/emulator integration tests and GitHub
+release artifact generation.
 
-Current hardening coverage:
+Verified coverage:
 
 - Android/iOS Flutter plugin structure.
 - Pointer-light Dart APIs: `YMap.set` and `YArray.insertValues`.
 - Native ownership notes in [doc/ffi_ownership_audit.md](doc/ffi_ownership_audit.md).
-- Host unit tests for Dart value conversion and native-test harnesses.
+- Host unit tests for Dart value conversion, transaction handling, sync, and
+  native-test harnesses.
 - Example Flutter sync harness in [example/](example/).
 - WebSocket relay test server in [tool/sync_relay_server.dart](tool/sync_relay_server.dart).
-- GitHub Actions for CI and native release artifacts.
+- Android integration tests for direct native API calls and the example app UI.
+- GitHub Actions for CI and reproducible native release artifacts.
 
-Before shipping in a real app, require successful Android/iOS integration tests,
-Yjs wire-compatibility tests, and native crash/leak monitoring in your app.
+Current production-readiness status: suitable for mobile app integration testing
+and internal/beta builds. Before using ydart in a high-stakes production app,
+run your own soak tests with real user flows, enable native crash reporting, and
+pin the exact native release artifact you ship.
+
+Last verified smoke release:
+
+- CI: <https://github.com/Knaackee/ydart/actions/runs/27533022293>
+- Native mobile release: <https://github.com/Knaackee/ydart/actions/runs/27533472813>
+- GitHub Release: <https://github.com/Knaackee/ydart/releases/tag/mobile-native-smoke>
 
 ## Supported platforms
 
@@ -53,7 +63,7 @@ Common:
 Android:
 
 - Android SDK
-- Android NDK r27 or newer
+- Android NDK r28c for the release workflow
 - `cargo-ndk`
 - Rust targets: `aarch64-linux-android`, `armv7-linux-androideabi`,
   `x86_64-linux-android`
@@ -133,9 +143,22 @@ Published assets:
 - `ydart-android-libyrs.zip`
 - `ydart-ios-libyrs-xcframework.zip`
 
+The Android ZIP contains:
+
+- `android/src/main/jniLibs/arm64-v8a/libyrs.so`
+- `android/src/main/jniLibs/armeabi-v7a/libyrs.so`
+- `android/src/main/jniLibs/x86_64/libyrs.so`
+
+The iOS ZIP contains:
+
+- `libyrs.xcframework`
+
 The workflow uses Rust nightly and temporarily enables `#![feature(if_let_guard)]`
 in the CI checkout if current upstream still needs it. It does not modify this
 repository or vendor a fork of `y-crdt`.
+
+The workflows opt into GitHub's Node 24 action runtime by setting
+`FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true`.
 
 ## Usage
 
@@ -202,6 +225,10 @@ flutter test integration_test/sync_harness_test.dart -d <device-id>
 and a Yjs V1 update fixture. `sync_harness_test.dart` drives the example UI
 through edit and sync flows, including the regression path that previously
 crashed in `ytext_insert`.
+
+The crash regression was reproduced on Android in the example app and fixed in
+the FFI transaction/input handling layer. The GitHub CI now runs the same
+regression flow on an Android emulator.
 
 Generate a Yjs update fixture:
 
