@@ -1,4 +1,5 @@
 import 'dart:ffi';
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
@@ -40,11 +41,27 @@ class YInput {
     if (value is int) return writeInteger(ptr, value);
     if (value is double) return writeNumber(ptr, value);
     if (value is String) return writeString(ptr, value);
+    if (value is Map<String, Object?>) return writeJson(ptr, value);
     throw ArgumentError.value(
       value,
       'value',
       'Unsupported YInput value. Supported values are null, bool, int, double, and String.',
     );
+  }
+
+  /// Allocates a YInput for a JSON object.
+  static Pointer<YInputNative> json(Map<String, Object?> value) {
+    final ptr = calloc<YInputNative>();
+    writeJson(ptr, value);
+    return ptr;
+  }
+
+  /// Writes a JSON object into [ptr].
+  static void writeJson(Pointer<YInputNative> ptr, Map<String, Object?> value) {
+    final strPtr = jsonEncode(value).toNativeUtf8();
+    ptr.ref.tag = YVal.json;
+    ptr.ref.len = 1;
+    ptr.ref.value = strPtr.cast();
   }
 
   /// Allocates a YInput for a boolean value.
@@ -142,7 +159,7 @@ class YInput {
   /// Frees nested content for a YInput cell without freeing the cell itself.
   static void destroyContent(Pointer<YInputNative> ptr) {
     final tag = ptr.ref.tag;
-    if (tag == YVal.jsonStr || tag == YVal.jsonBuf) {
+    if (tag == YVal.json || tag == YVal.jsonStr || tag == YVal.jsonBuf) {
       calloc.free(ptr.ref.value);
     }
   }

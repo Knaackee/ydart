@@ -36,9 +36,20 @@ void main() {
       expect(result, 'abc');
     });
 
+    test('allocates JSON map values', () {
+      final input = YInput.fromValue({
+        'bold': <String, Object?>{},
+      });
+      try {
+        expect(input.ref.tag, YVal.json);
+        expect(input.ref.value.cast<Utf8>().toDartString(), '{"bold":{}}');
+      } finally {
+        YInput.destroy(input);
+      }
+    });
+
     test('rejects unsupported values', () {
       expect(() => YInput.fromValue(<String>[]), throwsArgumentError);
-      expect(() => YInput.fromValue(<String, Object?>{}), throwsArgumentError);
     });
   });
 

@@ -138,6 +138,38 @@ void main() {
       b.dispose();
     }
   });
+
+  testWidgets('xml text formatting attributes work on device', (_) async {
+    final a = YDoc();
+    final b = YDoc();
+    try {
+      final fragmentA = a.getXmlFragment('content');
+      final fragmentB = b.getXmlFragment('content');
+      a.transact((txn) {
+        final paragraph = fragmentA.insertElement(txn, 0, 'paragraph');
+        final text = paragraph.insertText(txn, 0);
+        text.insert(txn, 0, 'with ');
+        YInput.withValue({'bold': <String, Object?>{}}, (attrs) {
+          text.insert(txn, 5, 'bold', attributes: attrs);
+        });
+      });
+
+      expect(
+        a.readTransact((txn) => fragmentA.getString(txn)),
+        '<paragraph>with <bold>bold</bold></paragraph>',
+      );
+
+      b.applyV1(a.stateDiffV1(b.stateVectorV1()));
+
+      expect(
+        b.readTransact((txn) => fragmentB.getString(txn)),
+        '<paragraph>with <bold>bold</bold></paragraph>',
+      );
+    } finally {
+      a.dispose();
+      b.dispose();
+    }
+  });
 }
 
 const _yjsUpdateV1 =
