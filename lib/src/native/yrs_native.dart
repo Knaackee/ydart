@@ -978,7 +978,9 @@ class YrsNative {
     'ytext_insert_embed',
   );
   late final ytextDelete =
-      _lib.lookupFunction<_ytext_delete_c, _ytext_delete_dart>('ytext_delete');
+      _lib.lookupFunction<_ytext_delete_c, _ytext_delete_dart>(
+    'ytext_remove_range',
+  );
   late final ytextFormat =
       _lib.lookupFunction<_ytext_format_c, _ytext_format_dart>('ytext_format');
   late final ytextString =
