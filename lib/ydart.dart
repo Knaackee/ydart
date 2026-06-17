@@ -14,6 +14,7 @@ export 'src/types/y_text.dart';
 export 'src/types/y_array.dart';
 export 'src/types/y_map.dart';
 export 'src/types/y_xml_element.dart';
+export 'src/types/y_xml_fragment.dart';
 export 'src/types/y_xml_text.dart';
 export 'src/types/y_input.dart';
 

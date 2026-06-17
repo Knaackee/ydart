@@ -251,6 +251,51 @@ void main() {
       });
     });
 
+    group('YXmlFragment', () {
+      late YDoc doc;
+      late YXmlFragment fragment;
+
+      setUp(() {
+        doc = YDoc();
+        fragment = doc.getXmlFragment('content');
+      });
+
+      tearDown(() => doc.dispose());
+
+      test('insert element with text and read string', () {
+        doc.transact((txn) {
+          final paragraph = fragment.insertElement(txn, 0, 'paragraph');
+          final text = paragraph.insertText(txn, 0);
+          text.insert(txn, 0, 'Hello XML fragment');
+        });
+        expect(doc.readTransact((txn) => fragment.length(txn)), 1);
+        expect(
+          doc.readTransact((txn) => fragment.getString(txn)),
+          '<paragraph>Hello XML fragment</paragraph>',
+        );
+      });
+
+      test('syncs between docs', () {
+        final other = YDoc();
+        final otherFragment = other.getXmlFragment('content');
+        try {
+          doc.transact((txn) {
+            final paragraph = fragment.insertElement(txn, 0, 'paragraph');
+            paragraph.insertText(txn, 0).insert(txn, 0, 'Synced');
+          });
+
+          other.applyV1(doc.stateDiffV1(other.stateVectorV1()));
+
+          expect(
+            other.readTransact((txn) => otherFragment.getString(txn)),
+            '<paragraph>Synced</paragraph>',
+          );
+        } finally {
+          other.dispose();
+        }
+      });
+    });
+
     group('YXmlText', () {
       late YDoc doc;
       late YXmlText xmlText;

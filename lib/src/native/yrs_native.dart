@@ -326,6 +326,11 @@ typedef _yxmltext_c = Pointer<BranchNative> Function(
 typedef _yxmltext_dart = Pointer<BranchNative> Function(
     Pointer<YDocNative> doc, Pointer<Utf8> name);
 
+typedef _yxmlfragment_c = Pointer<BranchNative> Function(
+    Pointer<YDocNative> doc, Pointer<Utf8> name);
+typedef _yxmlfragment_dart = Pointer<BranchNative> Function(
+    Pointer<YDocNative> doc, Pointer<Utf8> name);
+
 // YText operations
 typedef _ytext_insert_c = Void Function(
   Pointer<BranchNative> txt,
@@ -969,6 +974,10 @@ class YrsNative {
   late final yxmltext = _lib.lookupFunction<_yxmltext_c, _yxmltext_dart>(
     'yxmltext',
   );
+  late final yxmlfragment =
+      _lib.lookupFunction<_yxmlfragment_c, _yxmlfragment_dart>(
+    'yxmlfragment',
+  );
 
   // ---- YText ----
   late final ytextInsert =
@@ -1041,7 +1050,7 @@ class YrsNative {
   // ---- XmlElement ----
   late final yxmlelemInsert =
       _lib.lookupFunction<_yxmlelem_insert_c, _yxmlelem_insert_dart>(
-    'yxmlelem_insert',
+    'yxmlelem_insert_elem',
   );
   late final yxmlelemRemoveRange = _lib
       .lookupFunction<_yxmlelem_remove_range_c, _yxmlelem_remove_range_dart>(
@@ -1054,7 +1063,9 @@ class YrsNative {
   late final yxmlelemGet =
       _lib.lookupFunction<_yxmlelem_get_c, _yxmlelem_get_dart>('yxmlelem_get');
   late final yxmlelemLen =
-      _lib.lookupFunction<_yxmlelem_len_c, _yxmlelem_len_dart>('yxmlelem_len');
+      _lib.lookupFunction<_yxmlelem_len_c, _yxmlelem_len_dart>(
+    'yxmlelem_child_len',
+  );
   late final yxmlelemInsertAttr =
       _lib.lookupFunction<_yxmlelem_insert_attr_c, _yxmlelem_insert_attr_dart>(
     'yxmlelem_insert_attr',

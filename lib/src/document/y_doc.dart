@@ -9,6 +9,7 @@ import '../types/y_text.dart';
 import '../types/y_array.dart';
 import '../types/y_map.dart';
 import '../types/y_xml_element.dart';
+import '../types/y_xml_fragment.dart';
 import '../types/y_xml_text.dart';
 import 'undo_manager.dart';
 
@@ -121,6 +122,9 @@ class YDoc {
   }
 
   /// Returns a root-level [YXmlElement] shared type with the given [name].
+  ///
+  /// Prefer [getXmlFragment] for new code. Current y-crdt/yffi represents XML
+  /// documents as root fragments, with elements and text inserted below them.
   YXmlElement getXmlElement(String name) {
     _checkDisposed();
     final namePtr = name.toNativeUtf8();
@@ -130,12 +134,24 @@ class YDoc {
   }
 
   /// Returns a root-level [YXmlText] shared type with the given [name].
+  ///
+  /// Prefer [getXmlFragment] for new code. Current y-crdt/yffi represents XML
+  /// documents as root fragments, with elements and text inserted below them.
   YXmlText getXmlText(String name) {
     _checkDisposed();
     final namePtr = name.toNativeUtf8();
     final branch = _native.yxmltext(_handle, namePtr);
     calloc.free(namePtr);
     return YXmlText(branch, this);
+  }
+
+  /// Returns a root-level [YXmlFragment] shared type with the given [name].
+  YXmlFragment getXmlFragment(String name) {
+    _checkDisposed();
+    final namePtr = name.toNativeUtf8();
+    final branch = _native.yxmlfragment(_handle, namePtr);
+    calloc.free(namePtr);
+    return YXmlFragment(branch, this);
   }
 
   // ---------- Transactions ----------
