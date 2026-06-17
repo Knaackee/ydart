@@ -51,6 +51,25 @@ class YXmlFragment {
     return YOutput.readAndDestroy(ptr, _native.youtputDestroy);
   }
 
+  /// Returns the XML child at [index] as a typed Dart wrapper.
+  ///
+  /// This avoids routing rich-document consumers through the native XML
+  /// stringifier when they only need to traverse the tree.
+  Object? getNode(ReadTransaction txn, int index) {
+    final output = _native.yxmlelemGet(_handle, txn.handle, index);
+    if (output == nullptr) return null;
+    try {
+      final child = output.ref.value.cast<BranchNative>();
+      return switch (output.ref.tag) {
+        YVal.xmlElem => YXmlElement(child, _doc),
+        YVal.xmlText => YXmlText(child, _doc),
+        _ => null,
+      };
+    } finally {
+      _native.youtputDestroy(output);
+    }
+  }
+
   /// Returns the number of child nodes.
   int length(ReadTransaction txn) {
     return _native.yxmlelemLen(_handle, txn.handle);

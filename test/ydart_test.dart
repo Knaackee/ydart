@@ -275,6 +275,26 @@ void main() {
         );
       });
 
+      test('reads typed child nodes without stringifying the fragment', () {
+        doc.transact((txn) {
+          final heading = fragment.insertElement(txn, 0, 'heading');
+          heading.insertAttribute(txn, 'level', '2');
+          heading.insertText(txn, 0).insert(txn, 0, 'Typed XML');
+        });
+
+        final values = doc.readTransact((txn) {
+          final child = fragment.getNode(txn, 0) as YXmlElement;
+          final text = child.getNode(txn, 0) as YXmlText;
+          return [
+            child.tag,
+            child.getAttribute(txn, 'level'),
+            text.getString(txn)
+          ];
+        });
+
+        expect(values, ['heading', '2', 'Typed XML']);
+      });
+
       test('syncs between docs', () {
         final other = YDoc();
         final otherFragment = other.getXmlFragment('content');
