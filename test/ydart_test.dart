@@ -239,10 +239,17 @@ void main() {
       test('attributes', () {
         doc.transact((txn) {
           xml.insertAttribute(txn, 'class', 'container');
+          xml.insertAttribute(txn, 'level', '2');
+          xml.insertAttribute(txn, 'checked', 'true');
         });
         expect(
           doc.readTransact((txn) => xml.getAttribute(txn, 'class')),
           'container',
+        );
+        expect(doc.readTransact((txn) => xml.getAttribute(txn, 'level')), '2');
+        expect(
+          doc.readTransact((txn) => xml.getAttribute(txn, 'checked')),
+          'true',
         );
         doc.transact((txn) {
           xml.removeAttribute(txn, 'class');
@@ -337,10 +344,15 @@ void main() {
       test('attributes', () {
         doc.transact((txn) {
           xmlText.insertAttribute(txn, 'lang', 'en');
+          xmlText.insertAttribute(txn, 'spellcheck', 'false');
         });
         expect(
           doc.readTransact((txn) => xmlText.getAttribute(txn, 'lang')),
           'en',
+        );
+        expect(
+          doc.readTransact((txn) => xmlText.getAttribute(txn, 'spellcheck')),
+          'false',
         );
       });
     });

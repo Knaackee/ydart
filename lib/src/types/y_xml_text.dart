@@ -5,6 +5,7 @@ import 'package:ffi/ffi.dart';
 import '../document/y_doc.dart';
 import '../document/transaction.dart';
 import '../native/yrs_native.dart';
+import 'y_input.dart';
 
 /// A shared XML text node type.
 ///
@@ -56,12 +57,15 @@ class YXmlText {
   }
 
   /// Sets an attribute [name] to [value].
-  void insertAttribute(WriteTransaction txn, String name, String value) {
+  void insertAttribute(WriteTransaction txn, String name, Object? value) {
     final namePtr = name.toNativeUtf8();
-    final valuePtr = value.toNativeUtf8();
-    _native.yxmltextInsertAttr(_handle, txn.handle, namePtr, valuePtr);
-    calloc.free(namePtr);
-    calloc.free(valuePtr);
+    try {
+      YInput.withValue(value, (valuePtr) {
+        _native.yxmltextInsertAttr(_handle, txn.handle, namePtr, valuePtr);
+      });
+    } finally {
+      calloc.free(namePtr);
+    }
   }
 
   /// Removes the attribute with [name].

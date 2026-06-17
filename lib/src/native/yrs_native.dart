@@ -722,13 +722,13 @@ typedef _yxmlelem_insert_attr_c = Void Function(
   Pointer<BranchNative> xml,
   Pointer<TransactionMutNative> txn,
   Pointer<Utf8> name,
-  Pointer<Utf8> value,
+  Pointer<YInputNative> value,
 );
 typedef _yxmlelem_insert_attr_dart = void Function(
   Pointer<BranchNative> xml,
   Pointer<TransactionMutNative> txn,
   Pointer<Utf8> name,
-  Pointer<Utf8> value,
+  Pointer<YInputNative> value,
 );
 
 typedef _yxmlelem_remove_attr_c = Void Function(
@@ -812,13 +812,13 @@ typedef _yxmltext_insert_attr_c = Void Function(
   Pointer<BranchNative> txt,
   Pointer<TransactionMutNative> txn,
   Pointer<Utf8> name,
-  Pointer<Utf8> value,
+  Pointer<YInputNative> value,
 );
 typedef _yxmltext_insert_attr_dart = void Function(
   Pointer<BranchNative> txt,
   Pointer<TransactionMutNative> txn,
   Pointer<Utf8> name,
-  Pointer<Utf8> value,
+  Pointer<YInputNative> value,
 );
 
 typedef _yxmltext_remove_attr_c = Void Function(

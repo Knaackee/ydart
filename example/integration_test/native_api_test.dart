@@ -98,6 +98,46 @@ void main() {
       b.dispose();
     }
   });
+
+  testWidgets('xml attributes work on device', (_) async {
+    final a = YDoc();
+    final b = YDoc();
+    try {
+      final fragmentA = a.getXmlFragment('content');
+      final fragmentB = b.getXmlFragment('content');
+      a.transact((txn) {
+        final heading = fragmentA.insertElement(txn, 0, 'heading');
+        heading.insertAttribute(txn, 'level', '1');
+        heading.insertText(txn, 0).insert(txn, 0, 'Heading');
+        final taskList = fragmentA.insertElement(txn, 1, 'taskList');
+        final taskItem = taskList.insertElement(txn, 0, 'taskItem');
+        taskItem.insertAttribute(txn, 'checked', 'true');
+        taskItem.insertElement(txn, 0, 'paragraph')
+          ..insertText(txn, 0).insert(txn, 0, 'Done');
+      });
+
+      expect(a.readTransact((txn) => fragmentA.getString(txn)),
+          contains('level="1"'));
+      expect(a.readTransact((txn) => fragmentA.getString(txn)),
+          contains('checked="true"'));
+
+      b.applyV1(a.stateDiffV1(b.stateVectorV1()));
+
+      final values = b.readTransact((txn) {
+        final heading = fragmentB.getNode(txn, 0) as YXmlElement;
+        final taskList = fragmentB.getNode(txn, 1) as YXmlElement;
+        final taskItem = taskList.getNode(txn, 0) as YXmlElement;
+        return [
+          heading.getAttribute(txn, 'level'),
+          taskItem.getAttribute(txn, 'checked'),
+        ];
+      });
+      expect(values, ['1', 'true']);
+    } finally {
+      a.dispose();
+      b.dispose();
+    }
+  });
 }
 
 const _yjsUpdateV1 =

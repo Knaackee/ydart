@@ -71,12 +71,15 @@ class YXmlElement {
   }
 
   /// Sets an attribute [name] to [value].
-  void insertAttribute(WriteTransaction txn, String name, String value) {
+  void insertAttribute(WriteTransaction txn, String name, Object? value) {
     final namePtr = name.toNativeUtf8();
-    final valuePtr = value.toNativeUtf8();
-    _native.yxmlelemInsertAttr(_handle, txn.handle, namePtr, valuePtr);
-    calloc.free(namePtr);
-    calloc.free(valuePtr);
+    try {
+      YInput.withValue(value, (valuePtr) {
+        _native.yxmlelemInsertAttr(_handle, txn.handle, namePtr, valuePtr);
+      });
+    } finally {
+      calloc.free(namePtr);
+    }
   }
 
   /// Removes the attribute with [name].
@@ -88,13 +91,11 @@ class YXmlElement {
 
   /// Returns the value of attribute [name], or null if absent.
   String? getAttribute(ReadTransaction txn, String name) {
-    final namePtr = name.toNativeUtf8();
-    final ptr = _native.yxmlelemGetAttr(_handle, txn.handle, namePtr);
-    calloc.free(namePtr);
-    if (ptr == nullptr) return null;
-    final result = ptr.toDartString();
-    _native.ystringDestroy(ptr);
-    return result;
+    final openingTag = RegExp(r'^<[^>]+>').firstMatch(getString(txn))?.group(0);
+    if (openingTag == null) return null;
+    final match =
+        RegExp('${RegExp.escape(name)}="([^"]*)"').firstMatch(openingTag);
+    return match?.group(1);
   }
 
   /// Returns the tag name of this element.
