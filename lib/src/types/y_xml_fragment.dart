@@ -58,10 +58,31 @@ class YXmlFragment {
 
   /// Returns the XML string representation of this fragment.
   String getString(ReadTransaction txn) {
-    final ptr = _native.yxmlelemString(_handle, txn.handle);
-    final result = ptr.toDartString();
-    _native.ystringDestroy(ptr);
-    return result;
+    final buffer = StringBuffer();
+    final childCount = length(txn);
+    for (var index = 0; index < childCount; index++) {
+      final output = _native.yxmlelemGet(_handle, txn.handle, index);
+      if (output == nullptr) continue;
+      try {
+        final child = output.ref.value.cast<BranchNative>();
+        Pointer<Utf8> stringPtr;
+        if (output.ref.tag == YVal.xmlText) {
+          stringPtr = _native.yxmltextString(child, txn.handle);
+        } else if (output.ref.tag == YVal.xmlElem) {
+          stringPtr = _native.yxmlelemString(child, txn.handle);
+        } else {
+          continue;
+        }
+        try {
+          buffer.write(stringPtr.toDartString());
+        } finally {
+          _native.ystringDestroy(stringPtr);
+        }
+      } finally {
+        _native.youtputDestroy(output);
+      }
+    }
+    return buffer.toString();
   }
 
   @override

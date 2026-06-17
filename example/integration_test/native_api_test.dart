@@ -70,6 +70,34 @@ void main() {
       doc.dispose();
     }
   });
+
+  testWidgets('xml fragment works on device', (_) async {
+    final a = YDoc();
+    final b = YDoc();
+    try {
+      final fragmentA = a.getXmlFragment('content');
+      final fragmentB = b.getXmlFragment('content');
+      a.transact((txn) {
+        final paragraph = fragmentA.insertElement(txn, 0, 'paragraph');
+        paragraph.insertText(txn, 0).insert(txn, 0, 'Hello fragment');
+      });
+
+      expect(
+        a.readTransact((txn) => fragmentA.getString(txn)),
+        '<paragraph>Hello fragment</paragraph>',
+      );
+
+      b.applyV1(a.stateDiffV1(b.stateVectorV1()));
+
+      expect(
+        b.readTransact((txn) => fragmentB.getString(txn)),
+        '<paragraph>Hello fragment</paragraph>',
+      );
+    } finally {
+      a.dispose();
+      b.dispose();
+    }
+  });
 }
 
 const _yjsUpdateV1 =
